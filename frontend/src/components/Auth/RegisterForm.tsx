@@ -10,6 +10,7 @@ export default function RegisterForm() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [nameError, setNameError] = useState('');
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const router = useRouter();
@@ -33,6 +34,9 @@ export default function RegisterForm() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setNameError('');
+        setEmailError('');
+        setPasswordError('');
 
         // 送信前にもバリデーションチェック
         let hasError = false;
@@ -90,9 +94,38 @@ export default function RegisterForm() {
             });
 
             if (err.response?.status === 422 && err.response?.data?.errors) {
-                // バリデーションエラーの内容を連結して表示
-                const errorMessages = Object.values(err.response.data.errors).flat().join('\n');
-                setError(errorMessages);
+                // バリデーションエラーを各フィールドに割り当て
+                const errors = err.response.data.errors;
+                
+                if (errors.name) {
+                    setNameError(errors.name[0]);
+                } else {
+                    setNameError('');
+                }
+                
+                if (errors.email) {
+                    setEmailError(errors.email[0]);
+                } else {
+                    setEmailError('');
+                }
+                
+                if (errors.password) {
+                    setPasswordError(errors.password[0]);
+                } else {
+                    setPasswordError('');
+                }
+                
+                // その他のエラーは全体エラーとして表示
+                const otherErrors = Object.entries(errors)
+                    .filter(([key]) => !['name', 'email', 'password'].includes(key))
+                    .map(([, messages]) => messages)
+                    .flat();
+                
+                if (otherErrors.length > 0) {
+                    setError(otherErrors.join('\n'));
+                } else {
+                    setError('');
+                }
             } else {
                 setError(err.response?.data?.message || err.message || '登録に失敗しました');
             }
@@ -112,7 +145,12 @@ export default function RegisterForm() {
                 autoComplete="name"
                 autoFocus
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                    setName(e.target.value);
+                    setNameError('');
+                }}
+                error={!!nameError}
+                helperText={nameError}
             />
             <TextField
                 margin="normal"
@@ -126,6 +164,7 @@ export default function RegisterForm() {
                 onChange={(e) => {
                     setEmail(e.target.value);
                     validateEmail(e.target.value);
+                    setEmailError('');
                 }}
                 error={!!emailError}
                 helperText={emailError}
@@ -143,6 +182,7 @@ export default function RegisterForm() {
                 onChange={(e) => {
                     setPassword(e.target.value);
                     validatePassword(e.target.value);
+                    setPasswordError('');
                 }}
                 error={!!passwordError}
                 helperText={passwordError}

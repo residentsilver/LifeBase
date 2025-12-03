@@ -6,7 +6,7 @@ import api from '@/lib/axios';
 import { useRouter } from 'next/navigation';
 
 export default function LoginForm() {
-    const [email, setEmail] = useState('');
+    const [login, setLogin] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const router = useRouter();
@@ -35,7 +35,7 @@ export default function LoginForm() {
             }
 
             console.log('[LoginForm] ログインAPIを呼び出し中...');
-            const response = await api.post('/login', { email, password });
+            const response = await api.post('/login', { login, password });
             console.log('[LoginForm] ログイン成功:', {
                 status: response.status,
                 hasToken: !!response.data.access_token,
@@ -66,13 +66,13 @@ export default function LoginForm() {
                 margin="normal"
                 required
                 fullWidth
-                id="email"
-                label="メールアドレス"
-                name="email"
-                autoComplete="email"
+                id="login"
+                label="メールアドレスまたはユーザー名"
+                name="login"
+                autoComplete="username"
                 autoFocus
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
             />
             <TextField
                 margin="normal"
