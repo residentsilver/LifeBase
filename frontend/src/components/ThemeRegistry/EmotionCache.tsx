@@ -53,10 +53,11 @@ export default function NextAppDirEmotionCacheProvider(props: NextAppDirEmotionC
         for (const name of names) {
             styles += registry.cache.inserted[name.name];
         }
+        const emotionKey = `${registry.cache.key} ${names.map(({ name }) => name).join(' ')}`;
         return (
             <style
-                key={Math.random()}
-                data-emotion={`${registry.cache.key} ${names.map(({ name }) => name).join(' ')}`}
+                key={emotionKey}
+                data-emotion={emotionKey}
                 dangerouslySetInnerHTML={{
                     __html: styles,
                 }}
