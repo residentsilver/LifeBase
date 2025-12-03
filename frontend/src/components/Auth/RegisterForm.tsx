@@ -10,11 +10,42 @@ export default function RegisterForm() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [emailError, setEmailError] = useState('');
+    const [passwordError, setPasswordError] = useState('');
     const router = useRouter();
+
+    const validateEmail = (value: string) => {
+        if (!value.includes('@')) {
+            setEmailError('メールアドレスには「@」を含めてください。');
+        } else {
+            setEmailError('');
+        }
+    };
+
+    const validatePassword = (value: string) => {
+        if (value.length < 8) {
+            setPasswordError('パスワードは8文字以上で入力してください。');
+        } else {
+            setPasswordError('');
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+
+        // 送信前にもバリデーションチェック
+        let hasError = false;
+        if (!email.includes('@')) {
+            validateEmail(email);
+            hasError = true;
+        }
+        if (password.length < 8) {
+            validatePassword(password);
+            hasError = true;
+        }
+        if (hasError) return;
+
         try {
             console.log('[RegisterForm] ユーザー登録処理を開始');
 
@@ -70,7 +101,7 @@ export default function RegisterForm() {
 
     return (
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+            {error && <Alert severity="error" sx={{ mb: 2 }} style={{ whiteSpace: 'pre-line' }}>{error}</Alert>}
             <TextField
                 margin="normal"
                 required
@@ -92,7 +123,12 @@ export default function RegisterForm() {
                 name="email"
                 autoComplete="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                    setEmail(e.target.value);
+                    validateEmail(e.target.value);
+                }}
+                error={!!emailError}
+                helperText={emailError}
             />
             <TextField
                 margin="normal"
@@ -104,7 +140,12 @@ export default function RegisterForm() {
                 id="password"
                 autoComplete="new-password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                    setPassword(e.target.value);
+                    validatePassword(e.target.value);
+                }}
+                error={!!passwordError}
+                helperText={passwordError}
             />
             <Button
                 type="submit"
