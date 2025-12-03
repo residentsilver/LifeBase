@@ -35,6 +35,7 @@ export default function FavoritesManager() {
     const [keywordError, setKeywordError] = useState('');
     const [loading, setLoading] = useState(false);
     const [deletingItemId, setDeletingItemId] = useState<number | null>(null);
+    const [deletingGenreId, setDeletingGenreId] = useState<number | null>(null);
     const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
         open: false,
         message: '',
@@ -198,9 +199,10 @@ export default function FavoritesManager() {
      * @param {number} id 削除するジャンルのID
      */
     const handleDeleteGenre = async (id: number) => {
+        if (deletingGenreId !== null) return; // 既に削除処理中の場合は何もしない
         if (confirm("本当に削除しますか？このジャンル内のすべてのアイテムも削除されます。")) {
+            setDeletingGenreId(id);
             try {
-                setLoading(true);
                 await api.delete(`/genres/${id}`);
                 await fetchGenres();
                 // Reset selection if deleted
@@ -213,7 +215,7 @@ export default function FavoritesManager() {
                     severity: 'error'
                 });
             } finally {
-                setLoading(false);
+                setDeletingGenreId(null);
             }
         }
     };
@@ -284,8 +286,14 @@ export default function FavoritesManager() {
                     {/* Genre Actions (Delete current genre) */}
                     {typeof selectedGenreId === 'number' && (
                         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                            <Button color="error" size="small" onClick={() => handleDeleteGenre(selectedGenreId)}>
-                                このジャンルを削除
+                            <Button 
+                                color="error" 
+                                size="small" 
+                                onClick={() => handleDeleteGenre(selectedGenreId)}
+                                disabled={deletingGenreId !== null}
+                                startIcon={deletingGenreId === selectedGenreId ? <CircularProgress size={16} /> : null}
+                            >
+                                {deletingGenreId === selectedGenreId ? '削除中...' : 'このジャンルを削除'}
                             </Button>
                         </Box>
                     )}
