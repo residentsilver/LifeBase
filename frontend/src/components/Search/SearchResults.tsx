@@ -131,7 +131,6 @@ export default function SearchResults({ results, selectedStore, onStoreClick }: 
                                             return (
                                                 <React.Fragment key={storeIdx}>
                                                     <ListItem
-                                                        button
                                                         onClick={() => {
                                                             if (store.latitude && store.longitude) {
                                                                 onStoreClick({
@@ -145,6 +144,7 @@ export default function SearchResults({ results, selectedStore, onStoreClick }: 
                                                             }
                                                         }}
                                                         sx={{
+                                                            cursor: 'pointer',
                                                             backgroundColor: isSelected ? 'action.selected' : 'transparent',
                                                             '&:hover': {
                                                                 backgroundColor: isSelected ? 'action.selected' : 'action.hover',

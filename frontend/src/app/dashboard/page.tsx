@@ -10,6 +10,7 @@ import MapComponent from '@/components/Search/MapComponent';
 import SearchResults from '@/components/Search/SearchResults';
 import HistoryList from '@/components/History/HistoryList';
 import { useJsApiLoader } from '@react-google-maps/api';
+import { getCache, setCache, cleanupExpiredCache } from '@/lib/searchCache';
 
 const libraries: ("places" | "geometry" | "drawing" | "visualization")[] = ["places"];
 
@@ -66,6 +67,9 @@ export default function DashboardPage() {
             }
         };
         fetchUser();
+
+        // 有効期限切れのキャッシュをクリーンアップ
+        cleanupExpiredCache();
     }, [router]);
 
     const handleLogout = async () => {
@@ -80,22 +84,80 @@ export default function DashboardPage() {
 
     /**
      * 検索実行処理
+     * キャッシュ機能付き：同じ検索条件の場合はキャッシュから結果を取得
      * @param {string} searchAddress 検索する住所（省略時は現在のaddress状態を使用）
      * @param {number} searchRadius 検索半径（省略時は現在のradius状態を使用）
      */
     const handleSearch = async (searchAddress?: string, searchRadius?: number) => {
-        const targetAddress = searchAddress ?? address;
-        const targetRadius = searchRadius ?? radius;
-        
-        if (!targetAddress) return;
+        // 引数の型チェックと正規化
+        let targetAddress: string;
+        let targetRadius: number;
+
+        if (searchAddress !== undefined && searchAddress !== null) {
+            // 引数が提供された場合
+            if (typeof searchAddress !== 'string') {
+                console.error('handleSearch: searchAddress is not a string:', searchAddress);
+                return;
+            }
+            targetAddress = searchAddress.trim();
+        } else {
+            // 引数が提供されていない場合は状態から取得
+            if (typeof address !== 'string' || !address) {
+                console.error('handleSearch: address state is not a valid string:', address);
+                return;
+            }
+            targetAddress = address.trim();
+        }
+
+        if (searchRadius !== undefined && searchRadius !== null) {
+            // 引数が提供された場合
+            if (typeof searchRadius !== 'number' || isNaN(searchRadius)) {
+                console.error('handleSearch: searchRadius is not a valid number:', searchRadius);
+                return;
+            }
+            targetRadius = searchRadius;
+        } else {
+            // 引数が提供されていない場合は状態から取得
+            if (typeof radius !== 'number' || isNaN(radius)) {
+                console.error('handleSearch: radius state is not a valid number:', radius);
+                return;
+            }
+            targetRadius = radius;
+        }
+
+        // 空文字列チェック
+        if (!targetAddress || targetAddress.length === 0) {
+            console.warn('handleSearch: targetAddress is empty');
+            return;
+        }
+
+        // キャッシュをチェック
+        const cachedData = getCache(targetAddress, targetRadius);
+        if (cachedData) {
+            // キャッシュから結果を取得
+            console.log('✅ キャッシュから検索結果を取得しました');
+            setSearchResults(cachedData.results);
+            setSearchCenter(cachedData.searchPoint);
+            setSelectedStore(null); // 新しい検索時は選択をリセット
+            return;
+        }
+
+        // キャッシュがない場合はAPIを呼び出し
         setLoading(true);
         try {
             const response = await api.post('/search/nearby', {
                 address: targetAddress,
                 radius_m: targetRadius
             });
-            setSearchResults(response.data.results);
-            setSearchCenter(response.data.search_point);
+            const results = response.data.results;
+            const searchPoint = response.data.search_point;
+
+            // 検索結果をキャッシュに保存
+            setCache(targetAddress, targetRadius, results, searchPoint);
+            console.log('💾 検索結果をキャッシュに保存しました');
+
+            setSearchResults(results);
+            setSearchCenter(searchPoint);
             setSelectedStore(null); // 新しい検索時は選択をリセット
         } catch (error) {
             console.error('Search failed', error);

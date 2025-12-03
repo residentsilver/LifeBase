@@ -61,7 +61,10 @@ export default function SearchPanel({ address, setAddress, radius, setRadius, on
                         fullWidth
                         variant="contained"
                         startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SearchIcon />}
-                        onClick={onSearch}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            onSearch();
+                        }}
                         disabled={loading}
                     >
                         {loading ? '検索中...' : '検索'}
