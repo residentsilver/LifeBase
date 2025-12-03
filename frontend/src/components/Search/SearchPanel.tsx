@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Box, TextField, Slider, Typography, Button, Grid } from '@mui/material';
+import { Box, TextField, Slider, Typography, Button, Grid, CircularProgress } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 
 interface SearchPanelProps {
@@ -45,11 +45,11 @@ export default function SearchPanel({ address, setAddress, radius, setRadius, on
                     <Button
                         fullWidth
                         variant="contained"
-                        startIcon={<SearchIcon />}
+                        startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SearchIcon />}
                         onClick={onSearch}
                         disabled={loading}
                     >
-                        検索
+                        {loading ? '検索中...' : '検索'}
                     </Button>
                 </Grid>
             </Grid>

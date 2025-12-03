@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Container, Typography, Box, Button, Grid, Dialog, DialogTitle, DialogContent, TextField, DialogActions } from '@mui/material';
+import { Container, Typography, Box, Button, Grid, Dialog, DialogTitle, DialogContent, TextField, DialogActions, Backdrop, CircularProgress } from '@mui/material';
 import api from '@/lib/axios';
 import { useRouter } from 'next/navigation';
 import FavoritesManager from '@/components/Favorites/FavoritesManager';
@@ -158,40 +158,58 @@ export default function DashboardPage() {
                     loading={loading}
                 />
 
-                <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, md: 8 }}>
-                        {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? (
-                            <Box sx={{ p: 3, border: '2px dashed #f44336', borderRadius: 2, textAlign: 'center' }}>
-                                <Typography variant="h6" color="error" gutterBottom>
-                                    ⚠️ Google Maps API キーが設定されていません
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    frontend/.env.local または frontend/.env に NEXT_PUBLIC_GOOGLE_MAPS_API_KEY を設定してください。
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                    設定後、Dockerコンテナを再起動してください: docker-compose restart frontend
-                                </Typography>
-                            </Box>
-                        ) : isLoaded ? (
-                            <MapComponent
-                                center={searchCenter || { lat: 35.681236, lng: 139.767125 }}
-                                results={searchResults}
-                                radius={radius}
+                <Box sx={{ position: 'relative' }}>
+                    <Backdrop
+                        open={loading}
+                        sx={{
+                            position: 'absolute',
+                            zIndex: (theme) => theme.zIndex.drawer + 1,
+                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                            borderRadius: 2,
+                        }}
+                    >
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                            <CircularProgress size={60} />
+                            <Typography variant="h6" color="primary">
+                                検索中...
+                            </Typography>
+                        </Box>
+                    </Backdrop>
+                    <Grid container spacing={2}>
+                        <Grid size={{ xs: 12, md: 8 }}>
+                            {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? (
+                                <Box sx={{ p: 3, border: '2px dashed #f44336', borderRadius: 2, textAlign: 'center' }}>
+                                    <Typography variant="h6" color="error" gutterBottom>
+                                        ⚠️ Google Maps API キーが設定されていません
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        frontend/.env.local または frontend/.env に NEXT_PUBLIC_GOOGLE_MAPS_API_KEY を設定してください。
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                        設定後、Dockerコンテナを再起動してください: docker-compose restart frontend
+                                    </Typography>
+                                </Box>
+                            ) : isLoaded ? (
+                                <MapComponent
+                                    center={searchCenter || { lat: 35.681236, lng: 139.767125 }}
+                                    results={searchResults}
+                                    radius={radius}
+                                    selectedStore={selectedStore}
+                                    onMarkerClick={setSelectedStore}
+                                />
+                            ) : (
+                                <Typography>地図を読み込み中...</Typography>
+                            )}
+                        </Grid>
+                        <Grid size={{ xs: 12, md: 4 }}>
+                            <SearchResults 
+                                results={searchResults} 
                                 selectedStore={selectedStore}
-                                onMarkerClick={setSelectedStore}
+                                onStoreClick={setSelectedStore}
                             />
-                        ) : (
-                            <Typography>地図を読み込み中...</Typography>
-                        )}
+                        </Grid>
                     </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                        <SearchResults 
-                            results={searchResults} 
-                            selectedStore={selectedStore}
-                            onStoreClick={setSelectedStore}
-                        />
-                    </Grid>
-                </Grid>
+                </Box>
             </Box>
 
             {/* History Section */}
