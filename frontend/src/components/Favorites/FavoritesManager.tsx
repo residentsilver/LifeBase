@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import {
     Box, Typography, Tabs, Tab, Button, List, ListItem, ListItemText,
     IconButton, Dialog, DialogTitle, DialogContent, TextField, DialogActions,
-    FormControl, InputLabel, Select, MenuItem
+    FormControl, InputLabel, Select, MenuItem, Snackbar, Alert, CircularProgress
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -31,6 +31,14 @@ export default function FavoritesManager() {
     const [newGenreName, setNewGenreName] = useState('');
     const [newItemKeyword, setNewItemKeyword] = useState('');
     const [newItemGenreId, setNewItemGenreId] = useState<number | ''>('');
+    const [genreError, setGenreError] = useState('');
+    const [keywordError, setKeywordError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+        open: false,
+        message: '',
+        severity: 'success'
+    });
 
     useEffect(() => {
         fetchGenres();
@@ -50,34 +58,163 @@ export default function FavoritesManager() {
         setItems(res.data);
     };
 
+    /**
+     * ジャンル名のバリデーション
+     * @returns {boolean} バリデーションが成功したかどうか
+     */
+    const validateGenreName = (): boolean => {
+        const trimmed = newGenreName.trim();
+        if (!trimmed) {
+            setGenreError('ジャンル名を入力してください');
+            return false;
+        }
+        setGenreError('');
+        return true;
+    };
+
+    /**
+     * キーワードのバリデーション
+     * @returns {boolean} バリデーションが成功したかどうか
+     */
+    const validateKeyword = (): boolean => {
+        const trimmed = newItemKeyword.trim();
+        if (!trimmed) {
+            setKeywordError('キーワードを入力してください');
+            return false;
+        }
+        if (!newItemGenreId) {
+            setKeywordError('ジャンルを選択してください');
+            return false;
+        }
+        setKeywordError('');
+        return true;
+    };
+
+    /**
+     * ジャンル作成処理
+     */
     const handleCreateGenre = async () => {
-        await api.post('/genres', { name: newGenreName });
-        setNewGenreName('');
-        setOpenGenreDialog(false);
-        fetchGenres();
+        if (!validateGenreName()) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await api.post('/genres', { name: newGenreName.trim() });
+            setNewGenreName('');
+            setGenreError('');
+            setOpenGenreDialog(false);
+            await fetchGenres();
+            setSnackbar({ open: true, message: 'ジャンルを追加しました', severity: 'success' });
+        } catch (error: any) {
+            setSnackbar({
+                open: true,
+                message: error.response?.data?.message || 'ジャンルの追加に失敗しました',
+                severity: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
+    /**
+     * アイテム作成処理
+     */
     const handleCreateItem = async () => {
-        await api.post('/favorite-items', { genre_id: newItemGenreId, keyword: newItemKeyword });
-        setNewItemKeyword('');
-        setNewItemGenreId('');
-        setOpenItemDialog(false);
-        fetchItems();
+        if (!validateKeyword()) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await api.post('/favorite-items', {
+                genre_id: newItemGenreId,
+                keyword: newItemKeyword.trim()
+            });
+            setNewItemKeyword('');
+            setNewItemGenreId('');
+            setKeywordError('');
+            setOpenItemDialog(false);
+            await fetchItems();
+            setSnackbar({ open: true, message: 'アイテムを追加しました', severity: 'success' });
+        } catch (error: any) {
+            setSnackbar({
+                open: true,
+                message: error.response?.data?.message || 'アイテムの追加に失敗しました',
+                severity: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
+    /**
+     * エンターキー押下時の処理（ジャンル作成）
+     * @param {React.KeyboardEvent<HTMLInputElement>} e キーボードイベント
+     */
+    const handleGenreKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleCreateGenre();
+        }
+    };
+
+    /**
+     * エンターキー押下時の処理（アイテム作成）
+     * @param {React.KeyboardEvent<HTMLInputElement>} e キーボードイベント
+     */
+    const handleKeywordKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleCreateItem();
+        }
+    };
+
+    /**
+     * アイテム削除処理
+     * @param {number} id 削除するアイテムのID
+     */
     const handleDeleteItem = async (id: number) => {
-        await api.delete(`/favorite-items/${id}`);
-        fetchItems();
+        try {
+            setLoading(true);
+            await api.delete(`/favorite-items/${id}`);
+            await fetchItems();
+            setSnackbar({ open: true, message: 'アイテムを削除しました', severity: 'success' });
+        } catch (error: any) {
+            setSnackbar({
+                open: true,
+                message: error.response?.data?.message || 'アイテムの削除に失敗しました',
+                severity: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
+    /**
+     * ジャンル削除処理
+     * @param {number} id 削除するジャンルのID
+     */
     const handleDeleteGenre = async (id: number) => {
         if (confirm("本当に削除しますか？このジャンル内のすべてのアイテムも削除されます。")) {
-            await api.delete(`/genres/${id}`);
-            fetchGenres();
-            // Reset selection if deleted
-            if (selectedGenreId === id) setSelectedGenreId(false);
+            try {
+                setLoading(true);
+                await api.delete(`/genres/${id}`);
+                await fetchGenres();
+                // Reset selection if deleted
+                if (selectedGenreId === id) setSelectedGenreId(false);
+                setSnackbar({ open: true, message: 'ジャンルを削除しました', severity: 'success' });
+            } catch (error: any) {
+                setSnackbar({
+                    open: true,
+                    message: error.response?.data?.message || 'ジャンルの削除に失敗しました',
+                    severity: 'error'
+                });
+            } finally {
+                setLoading(false);
+            }
         }
-    }
+    };
 
     const filteredItems = items.filter(item => item.genre_id === selectedGenreId);
 
@@ -144,7 +281,14 @@ export default function FavoritesManager() {
             )}
 
             {/* Create Genre Dialog */}
-            <Dialog open={openGenreDialog} onClose={() => setOpenGenreDialog(false)}>
+            <Dialog
+                open={openGenreDialog}
+                onClose={() => {
+                    setOpenGenreDialog(false);
+                    setNewGenreName('');
+                    setGenreError('');
+                }}
+            >
                 <DialogTitle>新しいジャンルを追加</DialogTitle>
                 <DialogContent>
                     <TextField
@@ -153,25 +297,60 @@ export default function FavoritesManager() {
                         label="ジャンル名"
                         fullWidth
                         value={newGenreName}
-                        onChange={(e) => setNewGenreName(e.target.value)}
+                        onChange={(e) => {
+                            setNewGenreName(e.target.value);
+                            if (genreError) setGenreError('');
+                        }}
+                        onKeyDown={handleGenreKeyDown}
+                        error={!!genreError}
+                        helperText={genreError}
+                        disabled={loading}
                     />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpenGenreDialog(false)}>キャンセル</Button>
-                    <Button onClick={handleCreateGenre}>作成</Button>
+                    <Button
+                        onClick={() => {
+                            setOpenGenreDialog(false);
+                            setNewGenreName('');
+                            setGenreError('');
+                        }}
+                        disabled={loading}
+                    >
+                        キャンセル
+                    </Button>
+                    <Button
+                        onClick={handleCreateGenre}
+                        variant="contained"
+                        disabled={loading || !newGenreName.trim()}
+                        startIcon={loading ? <CircularProgress size={16} /> : null}
+                    >
+                        作成
+                    </Button>
                 </DialogActions>
             </Dialog>
 
             {/* Create Item Dialog */}
-            <Dialog open={openItemDialog} onClose={() => setOpenItemDialog(false)}>
+            <Dialog
+                open={openItemDialog}
+                onClose={() => {
+                    setOpenItemDialog(false);
+                    setNewItemKeyword('');
+                    setNewItemGenreId('');
+                    setKeywordError('');
+                }}
+            >
                 <DialogTitle>新しいアイテムを追加</DialogTitle>
                 <DialogContent>
-                    <FormControl fullWidth margin="dense">
+                    <FormControl fullWidth margin="dense" error={!!keywordError && !newItemGenreId}>
                         <InputLabel>ジャンル</InputLabel>
                         <Select
                             value={newItemGenreId}
-                            label="Genre"
-                            onChange={(e) => setNewItemGenreId(Number(e.target.value))}
+                            label="ジャンル"
+                            onChange={(e) => {
+                                setNewItemGenreId(Number(e.target.value));
+                                if (keywordError && !newItemGenreId) setKeywordError('');
+                            }}
+                            disabled={loading}
                         >
                             {genres.map((g) => (
                                 <MenuItem key={g.id} value={g.id}>{g.name}</MenuItem>
@@ -183,14 +362,54 @@ export default function FavoritesManager() {
                         label="キーワード (例: スターバックス)"
                         fullWidth
                         value={newItemKeyword}
-                        onChange={(e) => setNewItemKeyword(e.target.value)}
+                        onChange={(e) => {
+                            setNewItemKeyword(e.target.value);
+                            if (keywordError) setKeywordError('');
+                        }}
+                        onKeyDown={handleKeywordKeyDown}
+                        error={!!keywordError}
+                        helperText={keywordError}
+                        disabled={loading}
                     />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpenItemDialog(false)}>キャンセル</Button>
-                    <Button onClick={handleCreateItem}>作成</Button>
+                    <Button
+                        onClick={() => {
+                            setOpenItemDialog(false);
+                            setNewItemKeyword('');
+                            setNewItemGenreId('');
+                            setKeywordError('');
+                        }}
+                        disabled={loading}
+                    >
+                        キャンセル
+                    </Button>
+                    <Button
+                        onClick={handleCreateItem}
+                        variant="contained"
+                        disabled={loading || !newItemKeyword.trim() || !newItemGenreId}
+                        startIcon={loading ? <CircularProgress size={16} /> : null}
+                    >
+                        作成
+                    </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Snackbar for notifications */}
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={6000}
+                onClose={() => setSnackbar({ ...snackbar, open: false })}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert
+                    onClose={() => setSnackbar({ ...snackbar, open: false })}
+                    severity={snackbar.severity}
+                    sx={{ width: '100%' }}
+                >
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 }
