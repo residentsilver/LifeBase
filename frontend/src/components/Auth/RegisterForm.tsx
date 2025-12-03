@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { TextField, Button, Box, Typography, Alert } from '@mui/material';
+import { TextField, Button, Box, Typography, Alert, Backdrop, CircularProgress } from '@mui/material';
 import api from '@/lib/axios';
 import { useRouter } from 'next/navigation';
 
@@ -13,6 +13,7 @@ export default function RegisterForm() {
     const [nameError, setNameError] = useState('');
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
+    const [loading, setLoading] = useState(false);
     const router = useRouter();
 
     const validateEmail = (value: string) => {
@@ -50,6 +51,7 @@ export default function RegisterForm() {
         }
         if (hasError) return;
 
+        setLoading(true);
         try {
             console.log('[RegisterForm] ユーザー登録処理を開始');
 
@@ -129,11 +131,13 @@ export default function RegisterForm() {
             } else {
                 setError(err.response?.data?.message || err.message || '登録に失敗しました');
             }
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, position: 'relative' }}>
             {error && <Alert severity="error" sx={{ mb: 2 }} style={{ whiteSpace: 'pre-line' }}>{error}</Alert>}
             <TextField
                 margin="normal"
@@ -151,6 +155,7 @@ export default function RegisterForm() {
                 }}
                 error={!!nameError}
                 helperText={nameError}
+                disabled={loading}
             />
             <TextField
                 margin="normal"
@@ -168,6 +173,7 @@ export default function RegisterForm() {
                 }}
                 error={!!emailError}
                 helperText={emailError}
+                disabled={loading}
             />
             <TextField
                 margin="normal"
@@ -184,17 +190,42 @@ export default function RegisterForm() {
                     validatePassword(e.target.value);
                     setPasswordError('');
                 }}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && !loading) {
+                        e.preventDefault();
+                        handleSubmit(e as any);
+                    }
+                }}
                 error={!!passwordError}
                 helperText={passwordError}
+                disabled={loading}
             />
             <Button
                 type="submit"
                 fullWidth
                 variant="contained"
                 sx={{ mt: 3, mb: 2 }}
+                disabled={loading}
+                startIcon={loading ? <CircularProgress size={16} /> : null}
             >
-                登録する
+                {loading ? '登録中...' : '登録する'}
             </Button>
+            <Backdrop
+                open={loading}
+                sx={{
+                    position: 'absolute',
+                    zIndex: (theme) => theme.zIndex.drawer + 1,
+                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                    borderRadius: 2,
+                }}
+            >
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                    <CircularProgress size={60} />
+                    <Typography variant="h6" color="primary">
+                        登録中...
+                    </Typography>
+                </Box>
+            </Backdrop>
         </Box>
     );
 }
