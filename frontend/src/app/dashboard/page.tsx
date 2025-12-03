@@ -20,6 +20,15 @@ export default function DashboardPage() {
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [searchCenter, setSearchCenter] = useState<{ lat: number; lng: number; address_resolved?: string } | null>(null);
     const [loading, setLoading] = useState(false);
+    // 選択された店舗の状態管理（店舗の一意の識別子としてplace_idまたはlat/lngの組み合わせを使用）
+    const [selectedStore, setSelectedStore] = useState<{
+        name: string;
+        latitude: number;
+        longitude: number;
+        vicinity?: string;
+        distance_m?: number;
+        place_id?: string;
+    } | null>(null);
 
     // History State
     const [openSaveDialog, setOpenSaveDialog] = useState(false);
@@ -77,6 +86,7 @@ export default function DashboardPage() {
             });
             setSearchResults(response.data.results);
             setSearchCenter(response.data.search_point);
+            setSelectedStore(null); // 新しい検索時は選択をリセット
         } catch (error) {
             console.error('Search failed', error);
             alert('検索に失敗しました。もう一度お試しください。');
@@ -167,13 +177,19 @@ export default function DashboardPage() {
                                 center={searchCenter || { lat: 35.681236, lng: 139.767125 }}
                                 results={searchResults}
                                 radius={radius}
+                                selectedStore={selectedStore}
+                                onMarkerClick={setSelectedStore}
                             />
                         ) : (
                             <Typography>地図を読み込み中...</Typography>
                         )}
                     </Grid>
                     <Grid size={{ xs: 12, md: 4 }}>
-                        <SearchResults results={searchResults} />
+                        <SearchResults 
+                            results={searchResults} 
+                            selectedStore={selectedStore}
+                            onStoreClick={setSelectedStore}
+                        />
                     </Grid>
                 </Grid>
             </Box>

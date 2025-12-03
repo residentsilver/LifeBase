@@ -27,16 +27,36 @@ interface SearchResultItem {
     }>;
 }
 
+interface SelectedStore {
+    name: string;
+    latitude: number;
+    longitude: number;
+    vicinity?: string;
+    distance_m?: number;
+    place_id?: string;
+}
+
 interface SearchResultsProps {
     results: SearchResultItem[];
+    selectedStore: SelectedStore | null;
+    onStoreClick: (store: SelectedStore | null) => void;
 }
 
 /**
  * 検索結果を表示するコンポーネント
  * - ジャンルごとにソートして表示
  * - 各アイテムをアコーディオンで展開/折りたたみ可能
+ * - 店舗クリックでマップ上の対応するピンをハイライト
  */
-export default function SearchResults({ results }: SearchResultsProps) {
+export default function SearchResults({ results, selectedStore, onStoreClick }: SearchResultsProps) {
+    // 店舗が選択されているかどうかを判定する関数
+    const isStoreSelected = (store: SearchResultItem['stores'][0]) => {
+        if (!selectedStore || !store.latitude || !store.longitude) return false;
+        return (
+            store.latitude === selectedStore.latitude &&
+            store.longitude === selectedStore.longitude
+        );
+    };
     // ジャンルごとにソートしてグループ化
     const sortedResults = useMemo(() => {
         if (!results || results.length === 0) {
@@ -106,17 +126,52 @@ export default function SearchResults({ results }: SearchResultsProps) {
                             <AccordionDetails>
                                 {item.stores.length > 0 ? (
                                     <List dense>
-                                        {item.stores.map((store, storeIdx) => (
-                                            <React.Fragment key={storeIdx}>
-                                                <ListItem>
-                                                    <ListItemText
-                                                        primary={store.name}
-                                                        secondary={`${store.distance_m}m - ${store.vicinity || ''}`}
-                                                    />
-                                                </ListItem>
-                                                {storeIdx < item.stores.length - 1 && <Divider />}
-                                            </React.Fragment>
-                                        ))}
+                                        {item.stores.map((store, storeIdx) => {
+                                            const isSelected = isStoreSelected(store);
+                                            return (
+                                                <React.Fragment key={storeIdx}>
+                                                    <ListItem
+                                                        button
+                                                        onClick={() => {
+                                                            if (store.latitude && store.longitude) {
+                                                                onStoreClick({
+                                                                    name: store.name,
+                                                                    latitude: store.latitude,
+                                                                    longitude: store.longitude,
+                                                                    vicinity: store.vicinity,
+                                                                    distance_m: store.distance_m,
+                                                                    place_id: store.place_id,
+                                                                });
+                                                            }
+                                                        }}
+                                                        sx={{
+                                                            backgroundColor: isSelected ? 'action.selected' : 'transparent',
+                                                            '&:hover': {
+                                                                backgroundColor: isSelected ? 'action.selected' : 'action.hover',
+                                                            },
+                                                            borderLeft: isSelected ? '4px solid' : '4px solid transparent',
+                                                            borderColor: isSelected ? 'primary.main' : 'transparent',
+                                                            pl: isSelected ? 1.5 : 2,
+                                                        }}
+                                                    >
+                                                        <ListItemText
+                                                            primary={
+                                                                <Typography
+                                                                    sx={{
+                                                                        fontWeight: isSelected ? 'bold' : 'normal',
+                                                                        color: isSelected ? 'primary.main' : 'text.primary',
+                                                                    }}
+                                                                >
+                                                                    {store.name}
+                                                                </Typography>
+                                                            }
+                                                            secondary={`${store.distance_m}m - ${store.vicinity || ''}`}
+                                                        />
+                                                    </ListItem>
+                                                    {storeIdx < item.stores.length - 1 && <Divider />}
+                                                </React.Fragment>
+                                            );
+                                        })}
                                     </List>
                                 ) : (
                                     <Typography variant="body2" color="text.secondary">
