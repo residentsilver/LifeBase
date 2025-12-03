@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { TextField, Button, Box, Typography, Alert } from '@mui/material';
+import { TextField, Button, Box, Typography, Alert, Backdrop, CircularProgress } from '@mui/material';
 import api from '@/lib/axios';
 import { useRouter } from 'next/navigation';
 
@@ -9,11 +9,13 @@ export default function LoginForm() {
     const [login, setLogin] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setLoading(true);
         try {
             console.log('[LoginForm] ログイン処理を開始');
             
@@ -56,11 +58,13 @@ export default function LoginForm() {
                 baseURL: err.config?.baseURL,
             });
             setError(err.response?.data?.message || err.message || 'ログインに失敗しました');
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, position: 'relative' }}>
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
             <TextField
                 margin="normal"
@@ -73,6 +77,7 @@ export default function LoginForm() {
                 autoFocus
                 value={login}
                 onChange={(e) => setLogin(e.target.value)}
+                disabled={loading}
             />
             <TextField
                 margin="normal"
@@ -85,15 +90,34 @@ export default function LoginForm() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
             />
             <Button
                 type="submit"
                 fullWidth
                 variant="contained"
                 sx={{ mt: 3, mb: 2 }}
+                disabled={loading}
+                startIcon={loading ? <CircularProgress size={16} /> : null}
             >
-                ログイン
+                {loading ? 'ログイン中...' : 'ログイン'}
             </Button>
+            <Backdrop
+                open={loading}
+                sx={{
+                    position: 'absolute',
+                    zIndex: (theme) => theme.zIndex.drawer + 1,
+                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                    borderRadius: 2,
+                }}
+            >
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                    <CircularProgress size={60} />
+                    <Typography variant="h6" color="primary">
+                        ログイン中...
+                    </Typography>
+                </Box>
+            </Backdrop>
         </Box>
     );
 }
