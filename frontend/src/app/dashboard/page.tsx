@@ -121,6 +121,28 @@ export default function DashboardPage() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    /**
+     * マーカークリック時の処理
+     * @param {any} store 選択された店舗情報（latitude/longitudeがオプショナル）
+     */
+    const handleMarkerClick = (store: any) => {
+        if (!store) {
+            setSelectedStore(null);
+            return;
+        }
+        // latitudeとlongitudeが存在する場合のみ設定
+        if (store.latitude !== undefined && store.longitude !== undefined) {
+            setSelectedStore({
+                name: store.name,
+                latitude: store.latitude,
+                longitude: store.longitude,
+                vicinity: store.vicinity,
+                distance_m: store.distance_m,
+                place_id: store.place_id,
+            });
+        }
+    };
+
     if (!user) return <Typography>Loading...</Typography>;
 
     return (
@@ -195,7 +217,7 @@ export default function DashboardPage() {
                                     results={searchResults}
                                     radius={radius}
                                     selectedStore={selectedStore}
-                                    onMarkerClick={setSelectedStore}
+                                    onMarkerClick={handleMarkerClick}
                                 />
                             ) : (
                                 <Typography>地図を読み込み中...</Typography>
@@ -228,11 +250,19 @@ export default function DashboardPage() {
                         fullWidth
                         value={saveName}
                         onChange={(e) => setSaveName(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                if (saveName.trim() && searchCenter) {
+                                    handleSaveHistory();
+                                }
+                            }
+                        }}
                     />
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenSaveDialog(false)}>キャンセル</Button>
-                    <Button onClick={handleSaveHistory}>保存</Button>
+                    <Button onClick={handleSaveHistory} disabled={!saveName.trim() || !searchCenter}>保存</Button>
                 </DialogActions>
             </Dialog>
         </Container>
