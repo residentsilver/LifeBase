@@ -34,6 +34,7 @@ export default function FavoritesManager() {
     const [genreError, setGenreError] = useState('');
     const [keywordError, setKeywordError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [deletingItemId, setDeletingItemId] = useState<number | null>(null);
     const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
         open: false,
         message: '',
@@ -175,8 +176,9 @@ export default function FavoritesManager() {
      * @param {number} id 削除するアイテムのID
      */
     const handleDeleteItem = async (id: number) => {
+        if (deletingItemId !== null) return; // 既に削除処理中の場合は何もしない
+        setDeletingItemId(id);
         try {
-            setLoading(true);
             await api.delete(`/favorite-items/${id}`);
             await fetchItems();
             setSnackbar({ open: true, message: 'アイテムを削除しました', severity: 'success' });
@@ -187,7 +189,7 @@ export default function FavoritesManager() {
                 severity: 'error'
             });
         } finally {
-            setLoading(false);
+            setDeletingItemId(null);
         }
     };
 
@@ -250,18 +252,30 @@ export default function FavoritesManager() {
                     </Tabs>
 
                     <List>
-                        {filteredItems.map((item) => (
-                            <ListItem
-                                key={item.id}
-                                secondaryAction={
-                                    <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteItem(item.id)}>
-                                        <DeleteIcon />
-                                    </IconButton>
-                                }
-                            >
-                                <ListItemText primary={item.keyword} />
-                            </ListItem>
-                        ))}
+                        {filteredItems.map((item) => {
+                            const isDeleting = deletingItemId === item.id;
+                            return (
+                                <ListItem
+                                    key={item.id}
+                                    secondaryAction={
+                                        <IconButton 
+                                            edge="end" 
+                                            aria-label="delete" 
+                                            onClick={() => handleDeleteItem(item.id)}
+                                            disabled={isDeleting || deletingItemId !== null}
+                                        >
+                                            {isDeleting ? (
+                                                <CircularProgress size={20} />
+                                            ) : (
+                                                <DeleteIcon />
+                                            )}
+                                        </IconButton>
+                                    }
+                                >
+                                    <ListItemText primary={item.keyword} />
+                                </ListItem>
+                            );
+                        })}
                         {filteredItems.length === 0 && (
                             <ListItem><ListItemText secondary="このジャンルにはアイテムがありません" /></ListItem>
                         )}
