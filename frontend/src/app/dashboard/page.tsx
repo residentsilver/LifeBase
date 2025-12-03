@@ -36,6 +36,7 @@ export default function DashboardPage() {
     const [saveName, setSaveName] = useState('');
     const [historyRefreshTrigger, setHistoryRefreshTrigger] = useState(0);
     const [savingHistory, setSavingHistory] = useState(false);
+    const [loggingOut, setLoggingOut] = useState(false);
 
     const router = useRouter();
 
@@ -73,12 +74,16 @@ export default function DashboardPage() {
     }, [router]);
 
     const handleLogout = async () => {
+        if (loggingOut) return;
+        setLoggingOut(true);
         try {
             await api.post('/logout');
             localStorage.removeItem('token');
             router.push('/login');
         } catch (error) {
             console.error('Logout failed', error);
+            alert('ログアウトに失敗しました。もう一度お試しください。');
+            setLoggingOut(false);
         }
     };
 
@@ -229,8 +234,30 @@ export default function DashboardPage() {
         <Container maxWidth="lg">
             <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h4">ダッシュボード</Typography>
-                <Button variant="outlined" onClick={handleLogout}>ログアウト</Button>
+                <Button 
+                    variant="outlined" 
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                    startIcon={loggingOut ? <CircularProgress size={16} /> : null}
+                >
+                    {loggingOut ? 'ログアウト中...' : 'ログアウト'}
+                </Button>
             </Box>
+            <Backdrop
+                open={loggingOut}
+                sx={{
+                    position: 'fixed',
+                    zIndex: (theme) => theme.zIndex.drawer + 1,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                }}
+            >
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                    <CircularProgress size={60} />
+                    <Typography variant="h6" color="white">
+                        ログアウト中...
+                    </Typography>
+                </Box>
+            </Backdrop>
             <Typography variant="body1" sx={{ mt: 2 }}>
                 ようこそ、{user.name}さん！
             </Typography>
