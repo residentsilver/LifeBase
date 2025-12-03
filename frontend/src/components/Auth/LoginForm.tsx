@@ -6,7 +6,7 @@ import api from '@/lib/axios';
 import { useRouter } from 'next/navigation';
 
 export default function LoginForm() {
-    const [email, setEmail] = useState('');
+    const [login, setLogin] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const router = useRouter();
@@ -15,15 +15,47 @@ export default function LoginForm() {
         e.preventDefault();
         setError('');
         try {
+            console.log('[LoginForm] ログイン処理を開始');
+            
             // Sanctum CSRF cookie
-            await api.get('/sanctum/csrf-cookie');
+            console.log('[LoginForm] CSRF cookieを取得中...');
+            try {
+                await api.get('/sanctum/csrf-cookie');
+                console.log('[LoginForm] CSRF cookie取得成功');
+            } catch (csrfError: any) {
+                console.error('[LoginForm] CSRF cookie取得エラー:', {
+                    status: csrfError.response?.status,
+                    statusText: csrfError.response?.statusText,
+                    data: csrfError.response?.data,
+                    url: csrfError.config?.url,
+                    baseURL: csrfError.config?.baseURL,
+                });
+                // CSRF cookieの取得に失敗しても続行（Bearer Token認証の場合は不要）
+                console.warn('[LoginForm] CSRF cookie取得失敗を無視して続行');
+            }
 
-            const response = await api.post('/login', { email, password });
+            console.log('[LoginForm] ログインAPIを呼び出し中...');
+            const response = await api.post('/login', { login, password });
+            console.log('[LoginForm] ログイン成功:', {
+                status: response.status,
+                hasToken: !!response.data.access_token,
+                user: response.data.user,
+            });
 
             localStorage.setItem('token', response.data.access_token);
-            router.push('/dashboard'); // Redirect to dashboard or home
+            console.log('[LoginForm] トークンをlocalStorageに保存');
+            
+            router.push('/dashboard');
         } catch (err: any) {
-            setError(err.response?.data?.message || 'ログインに失敗しました');
+            console.error('[LoginForm] ログインエラー:', {
+                message: err.message,
+                status: err.response?.status,
+                statusText: err.response?.statusText,
+                data: err.response?.data,
+                url: err.config?.url,
+                baseURL: err.config?.baseURL,
+            });
+            setError(err.response?.data?.message || err.message || 'ログインに失敗しました');
         }
     };
 
@@ -34,13 +66,13 @@ export default function LoginForm() {
                 margin="normal"
                 required
                 fullWidth
-                id="email"
-                label="メールアドレス"
-                name="email"
-                autoComplete="email"
+                id="login"
+                label="メールアドレスまたはユーザー名"
+                name="login"
+                autoComplete="username"
                 autoFocus
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
             />
             <TextField
                 margin="normal"

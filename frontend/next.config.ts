@@ -13,6 +13,19 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
+  // APIリクエストをバックエンドにプロキシ
+  async rewrites() {
+    return [
+      {
+        source: '/sanctum/:path*',
+        destination: 'http://laravel.test/sanctum/:path*',
+      },
+      {
+        source: '/api/:path*',
+        destination: 'http://laravel.test/api/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;
