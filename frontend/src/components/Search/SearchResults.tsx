@@ -118,7 +118,11 @@ export default function SearchResults({ results, selectedStore, onStoreClick }: 
                                             component="span"
                                             sx={{ ml: 1, color: 'text.secondary', fontSize: '0.875rem' }}
                                         >
-                                            ({item.stores.length}件)
+                                            (
+                                            <Typography component="span" sx={{ fontWeight: 'bold' }}>
+                                                {item.stores.length}件
+                                            </Typography>
+                                            )
                                         </Typography>
                                     )}
                                 </Typography>
