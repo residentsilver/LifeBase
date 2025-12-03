@@ -16,4 +16,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/search/nearby', [\App\Http\Controllers\SearchController::class, 'search']);
     Route::apiResource('histories', \App\Http\Controllers\HistoryController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::post('/histories/bulk-delete', [\App\Http\Controllers\HistoryController::class, 'bulkDestroy']);
 });

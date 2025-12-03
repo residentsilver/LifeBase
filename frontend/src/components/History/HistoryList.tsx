@@ -15,6 +15,7 @@ import {
     DialogActions,
     TextField,
     CircularProgress,
+    Checkbox,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -46,6 +47,8 @@ export default function HistoryList({ onLoadHistory, refreshTrigger }: HistoryLi
     });
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         fetchHistories();
@@ -56,10 +59,77 @@ export default function HistoryList({ onLoadHistory, refreshTrigger }: HistoryLi
         setHistories(res.data);
     };
 
+    /**
+     * 単一の履歴を削除する
+     * 
+     * @param id 削除する履歴のID
+     */
     const handleDelete = async (id: number) => {
         if (confirm('本当にこの履歴を削除しますか？')) {
             await api.delete(`/histories/${id}`);
             fetchHistories();
+            // 選択状態からも削除
+            setSelectedIds((prev) => {
+                const newSet = new Set(prev);
+                newSet.delete(id);
+                return newSet;
+            });
+        }
+    };
+
+    /**
+     * チェックボックスの選択状態を切り替える
+     * 
+     * @param id 履歴のID
+     */
+    const handleToggleSelect = (id: number) => {
+        setSelectedIds((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(id)) {
+                newSet.delete(id);
+            } else {
+                newSet.add(id);
+            }
+            return newSet;
+        });
+    };
+
+    /**
+     * 全選択/全解除を切り替える
+     */
+    const handleSelectAll = () => {
+        if (selectedIds.size === histories.length) {
+            // 全解除
+            setSelectedIds(new Set());
+        } else {
+            // 全選択
+            setSelectedIds(new Set(histories.map((h) => h.id)));
+        }
+    };
+
+    /**
+     * 選択された履歴を一括削除する
+     */
+    const handleBulkDelete = async () => {
+        if (selectedIds.size === 0) return;
+
+        const count = selectedIds.size;
+        if (!confirm(`選択した${count}件の履歴を削除しますか？`)) {
+            return;
+        }
+
+        setIsDeleting(true);
+        try {
+            await api.post('/histories/bulk-delete', {
+                ids: Array.from(selectedIds),
+            });
+            fetchHistories();
+            setSelectedIds(new Set());
+        } catch (error) {
+            console.error('履歴の一括削除に失敗しました:', error);
+            alert('履歴の一括削除に失敗しました。');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -125,42 +195,91 @@ export default function HistoryList({ onLoadHistory, refreshTrigger }: HistoryLi
         }
     };
 
+    const isAllSelected = histories.length > 0 && selectedIds.size === histories.length;
+    const isIndeterminate = selectedIds.size > 0 && selectedIds.size < histories.length;
+
     return (
         <Box sx={{ mt: 2 }}>
-            <Typography variant="h6">検索履歴</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">検索履歴</Typography>
+                {histories.length > 0 && (
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={handleSelectAll}
+                            disabled={isDeleting}
+                        >
+                            {isAllSelected ? '全解除' : '全選択'}
+                        </Button>
+                        {selectedIds.size > 0 && (
+                            <Button
+                                size="small"
+                                variant="contained"
+                                color="error"
+                                startIcon={isDeleting ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}
+                                onClick={handleBulkDelete}
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? '削除中...' : `一括削除 (${selectedIds.size}件)`}
+                            </Button>
+                        )}
+                    </Box>
+                )}
+            </Box>
             {histories.length === 0 ? (
                 <Typography color="text.secondary">履歴がありません。</Typography>
             ) : (
                 <List>
-                    {histories.map((history) => (
-                        <ListItem
-                            key={history.id}
-                            secondaryAction={
-                                <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                                    <Button
-                                        startIcon={<PlayArrowIcon />}
-                                        size="small"
-                                        variant="outlined"
-                                        onClick={() => onLoadHistory(history)}
-                                        sx={{ mr: 1 }}
-                                    >
-                                        読み込む
-                                    </Button>
-                                    <IconButton edge="end" aria-label="edit" onClick={() => handleEditOpen(history)}>
-                                        <EditIcon />
-                                    </IconButton>
-                                    <IconButton edge="end" aria-label="delete" onClick={() => handleDelete(history.id)}>
-                                        <DeleteIcon />
-                                    </IconButton>
-                                </Box>
-                            }
-                        >
-                            <ListItemText
-                                primary={history.name}
-                                secondary={`${history.address_text} (${history.radius_meter}m) - ${new Date(history.created_at).toLocaleDateString()}`}
-                            />
-                        </ListItem>
-                    ))}
+                    {histories.map((history) => {
+                        const isSelected = selectedIds.has(history.id);
+                        return (
+                            <ListItem
+                                key={history.id}
+                                secondaryAction={
+                                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                                        <Button
+                                            startIcon={<PlayArrowIcon />}
+                                            size="small"
+                                            variant="outlined"
+                                            onClick={() => onLoadHistory(history)}
+                                            sx={{ mr: 1 }}
+                                            disabled={isDeleting}
+                                        >
+                                            読み込む
+                                        </Button>
+                                        <IconButton
+                                            edge="end"
+                                            aria-label="edit"
+                                            onClick={() => handleEditOpen(history)}
+                                            disabled={isDeleting}
+                                        >
+                                            <EditIcon />
+                                        </IconButton>
+                                        <IconButton
+                                            edge="end"
+                                            aria-label="delete"
+                                            onClick={() => handleDelete(history.id)}
+                                            disabled={isDeleting}
+                                        >
+                                            <DeleteIcon />
+                                        </IconButton>
+                                    </Box>
+                                }
+                            >
+                                <Checkbox
+                                    checked={isSelected}
+                                    onChange={() => handleToggleSelect(history.id)}
+                                    disabled={isDeleting}
+                                    sx={{ mr: 1 }}
+                                />
+                                <ListItemText
+                                    primary={history.name}
+                                    secondary={`${history.address_text} (${history.radius_meter}m) - ${new Date(history.created_at).toLocaleDateString()}`}
+                                />
+                            </ListItem>
+                        );
+                    })}
                 </List>
             )}
             <Dialog open={isEditDialogOpen} onClose={handleEditClose} maxWidth="sm" fullWidth>

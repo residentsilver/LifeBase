@@ -66,4 +66,42 @@ class HistoryController extends Controller
 
         return response()->noContent();
     }
+
+    /**
+     * 複数の検索履歴を一括削除する
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'required|integer|exists:search_histories,id',
+        ]);
+
+        $user = $request->user();
+        $ids = $validated['ids'];
+
+        // ユーザーが所有している履歴のみを取得
+        $histories = $user->searchHistories()->whereIn('id', $ids)->get();
+
+        // 所有権を確認（念のため）
+        if ($histories->count() !== count($ids)) {
+            abort(403, 'Some histories do not belong to the user');
+        }
+
+        // 削除前の件数を保存
+        $deletedCount = $histories->count();
+
+        // 一括削除
+        $histories->each(function ($history) {
+            $history->delete();
+        });
+
+        return response()->json([
+            'message' => 'Histories deleted successfully',
+            'deleted_count' => $deletedCount,
+        ]);
+    }
 }

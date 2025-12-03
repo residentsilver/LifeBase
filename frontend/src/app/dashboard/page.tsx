@@ -181,7 +181,6 @@ export default function DashboardPage() {
             setOpenSaveDialog(false);
             setSaveName('');
             setHistoryRefreshTrigger(prev => prev + 1);
-            alert('検索条件を保存しました！');
         } catch (error) {
             console.error('Save history failed', error);
             alert('履歴の保存に失敗しました。');
