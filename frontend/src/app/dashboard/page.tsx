@@ -34,6 +34,7 @@ export default function DashboardPage() {
     const [openSaveDialog, setOpenSaveDialog] = useState(false);
     const [saveName, setSaveName] = useState('');
     const [historyRefreshTrigger, setHistoryRefreshTrigger] = useState(0);
+    const [savingHistory, setSavingHistory] = useState(false);
 
     const router = useRouter();
 
@@ -96,7 +97,8 @@ export default function DashboardPage() {
     };
 
     const handleSaveHistory = async () => {
-        if (!searchCenter || !saveName) return;
+        if (!searchCenter || !saveName || savingHistory) return;
+        setSavingHistory(true);
         try {
             await api.post('/histories', {
                 name: saveName,
@@ -112,6 +114,8 @@ export default function DashboardPage() {
         } catch (error) {
             console.error('Save history failed', error);
             alert('履歴の保存に失敗しました。');
+        } finally {
+            setSavingHistory(false);
         }
     };
 
@@ -240,9 +244,17 @@ export default function DashboardPage() {
             </Box>
 
             {/* Save History Dialog */}
-            <Dialog open={openSaveDialog} onClose={() => setOpenSaveDialog(false)}>
+            <Dialog open={openSaveDialog} onClose={() => !savingHistory && setOpenSaveDialog(false)}>
                 <DialogTitle>検索履歴を保存</DialogTitle>
                 <DialogContent>
+                    {savingHistory && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+                            <CircularProgress size={20} />
+                            <Typography variant="body2" color="primary">
+                                保存中...
+                            </Typography>
+                        </Box>
+                    )}
                     <TextField
                         autoFocus
                         margin="dense"
@@ -251,18 +263,25 @@ export default function DashboardPage() {
                         value={saveName}
                         onChange={(e) => setSaveName(e.target.value)}
                         onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
+                            if (e.key === 'Enter' && !e.shiftKey && !savingHistory) {
                                 e.preventDefault();
                                 if (saveName.trim() && searchCenter) {
                                     handleSaveHistory();
                                 }
                             }
                         }}
+                        disabled={savingHistory}
                     />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpenSaveDialog(false)}>キャンセル</Button>
-                    <Button onClick={handleSaveHistory} disabled={!saveName.trim() || !searchCenter}>保存</Button>
+                    <Button onClick={() => setOpenSaveDialog(false)} disabled={savingHistory}>キャンセル</Button>
+                    <Button 
+                        onClick={handleSaveHistory} 
+                        disabled={!saveName.trim() || !searchCenter || savingHistory}
+                        startIcon={savingHistory ? <CircularProgress size={16} /> : null}
+                    >
+                        {savingHistory ? '保存中...' : '保存'}
+                    </Button>
                 </DialogActions>
             </Dialog>
         </Container>
