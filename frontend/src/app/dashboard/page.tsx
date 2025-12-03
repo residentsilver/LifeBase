@@ -77,13 +77,21 @@ export default function DashboardPage() {
         }
     };
 
-    const handleSearch = async () => {
-        if (!address) return;
+    /**
+     * 検索実行処理
+     * @param {string} searchAddress 検索する住所（省略時は現在のaddress状態を使用）
+     * @param {number} searchRadius 検索半径（省略時は現在のradius状態を使用）
+     */
+    const handleSearch = async (searchAddress?: string, searchRadius?: number) => {
+        const targetAddress = searchAddress ?? address;
+        const targetRadius = searchRadius ?? radius;
+        
+        if (!targetAddress) return;
         setLoading(true);
         try {
             const response = await api.post('/search/nearby', {
-                address,
-                radius_m: radius
+                address: targetAddress,
+                radius_m: targetRadius
             });
             setSearchResults(response.data.results);
             setSearchCenter(response.data.search_point);
@@ -119,10 +127,16 @@ export default function DashboardPage() {
         }
     };
 
-    const handleLoadHistory = (history: any) => {
+    /**
+     * 履歴を読み込んで検索を自動実行
+     * @param {any} history 読み込む履歴情報
+     */
+    const handleLoadHistory = async (history: any) => {
         setAddress(history.address_text);
         setRadius(history.radius_meter);
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        // 履歴の条件で自動的に検索を実行
+        await handleSearch(history.address_text, history.radius_meter);
     };
 
     /**
