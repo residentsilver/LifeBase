@@ -28,6 +28,17 @@ export default function DashboardPage() {
 
     const router = useRouter();
 
+    // デバッグ用: 環境変数が読み込まれているか確認
+    useEffect(() => {
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+        if (!apiKey) {
+            console.error('❌ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY が設定されていません');
+            console.log('環境変数を確認してください: frontend/.env.local または frontend/.env');
+        } else {
+            console.log('✅ Google Maps API Key が読み込まれました:', apiKey.substring(0, 10) + '...');
+        }
+    }, []);
+
     const { isLoaded } = useJsApiLoader({
         id: 'google-map-script',
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
@@ -139,7 +150,19 @@ export default function DashboardPage() {
 
                 <Grid container spacing={2}>
                     <Grid size={{ xs: 12, md: 8 }}>
-                        {isLoaded ? (
+                        {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? (
+                            <Box sx={{ p: 3, border: '2px dashed #f44336', borderRadius: 2, textAlign: 'center' }}>
+                                <Typography variant="h6" color="error" gutterBottom>
+                                    ⚠️ Google Maps API キーが設定されていません
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    frontend/.env.local または frontend/.env に NEXT_PUBLIC_GOOGLE_MAPS_API_KEY を設定してください。
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                    設定後、Dockerコンテナを再起動してください: docker-compose restart frontend
+                                </Typography>
+                            </Box>
+                        ) : isLoaded ? (
                             <MapComponent
                                 center={searchCenter || { lat: 35.681236, lng: 139.767125 }}
                                 results={searchResults}
