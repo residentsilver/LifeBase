@@ -53,6 +53,7 @@ export default function DashboardPage() {
         id: 'google-map-script',
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
         libraries: libraries,
+        language: 'ja',
     });
 
     useEffect(() => {
