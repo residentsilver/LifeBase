@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Container, Typography, Box, Button, Grid, Dialog, DialogTitle, DialogContent, TextField, DialogActions, Backdrop, CircularProgress } from '@mui/material';
+import { Container, Typography, Box, Button, Grid, Dialog, DialogTitle, DialogContent, TextField, DialogActions } from '@mui/material';
+import { LoadingBackdrop, LoadingButton, LoadingInline } from '@/components/Loading';
 import api from '@/lib/axios';
 import { useRouter } from 'next/navigation';
 import FavoritesManager from '@/components/Favorites/FavoritesManager';
@@ -234,30 +235,22 @@ export default function DashboardPage() {
         <Container maxWidth="lg">
             <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h4">ダッシュボード</Typography>
-                <Button 
+                <LoadingButton 
                     variant="outlined" 
                     onClick={handleLogout}
-                    disabled={loggingOut}
-                    startIcon={loggingOut ? <CircularProgress size={16} /> : null}
+                    loading={loggingOut}
+                    loadingText="ログアウト中..."
                 >
-                    {loggingOut ? 'ログアウト中...' : 'ログアウト'}
-                </Button>
+                    ログアウト
+                </LoadingButton>
             </Box>
-            <Backdrop
+            <LoadingBackdrop
                 open={loggingOut}
-                sx={{
-                    position: 'fixed',
-                    zIndex: (theme) => theme.zIndex.drawer + 1,
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                }}
-            >
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                    <CircularProgress size={60} />
-                    <Typography variant="h6" color="white">
-                        ログアウト中...
-                    </Typography>
-                </Box>
-            </Backdrop>
+                message="ログアウト中..."
+                position="fixed"
+                textColor="white"
+                backgroundColor="rgba(0, 0, 0, 0.5)"
+            />
             <Typography variant="body1" sx={{ mt: 2 }}>
                 ようこそ、{user.name}さん！
             </Typography>
@@ -288,22 +281,10 @@ export default function DashboardPage() {
                 />
 
                 <Box sx={{ position: 'relative' }}>
-                    <Backdrop
+                    <LoadingBackdrop
                         open={loading}
-                        sx={{
-                            position: 'absolute',
-                            zIndex: (theme) => theme.zIndex.drawer + 1,
-                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                            borderRadius: 2,
-                        }}
-                    >
-                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                            <CircularProgress size={60} />
-                            <Typography variant="h6" color="primary">
-                                検索中...
-                            </Typography>
-                        </Box>
-                    </Backdrop>
+                        message="検索中..."
+                    />
                     <Grid container spacing={2}>
                         <Grid size={{ xs: 12, md: 8 }}>
                             {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? (
@@ -351,12 +332,12 @@ export default function DashboardPage() {
                 <DialogTitle>検索履歴を保存</DialogTitle>
                 <DialogContent>
                     {savingHistory && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
-                            <CircularProgress size={20} />
-                            <Typography variant="body2" color="primary">
-                                保存中...
-                            </Typography>
-                        </Box>
+                        <LoadingInline
+                            message="保存中..."
+                            spinnerSize={20}
+                            sx={{ mb: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}
+                            messagePosition="right"
+                        />
                     )}
                     <TextField
                         autoFocus
@@ -377,14 +358,18 @@ export default function DashboardPage() {
                     />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpenSaveDialog(false)} disabled={savingHistory}>キャンセル</Button>
-                    <Button 
+                    <LoadingButton onClick={() => setOpenSaveDialog(false)} disabled={!savingHistory} loading={false}>
+                        キャンセル
+                    </LoadingButton>
+                    <LoadingButton 
                         onClick={handleSaveHistory} 
-                        disabled={!saveName.trim() || !searchCenter || savingHistory}
-                        startIcon={savingHistory ? <CircularProgress size={16} /> : null}
+                        disabled={!saveName.trim() || !searchCenter}
+                        loading={savingHistory}
+                        loadingText="保存中..."
+                        variant="contained"
                     >
-                        {savingHistory ? '保存中...' : '保存'}
-                    </Button>
+                        保存
+                    </LoadingButton>
                 </DialogActions>
             </Dialog>
         </Container>

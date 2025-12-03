@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { TextField, Button, Box, Typography, Alert, Backdrop, CircularProgress } from '@mui/material';
+import { TextField, Box, Alert } from '@mui/material';
 import api from '@/lib/axios';
 import { useRouter } from 'next/navigation';
+import { LoadingBackdrop, LoadingButton } from '@/components/Loading';
 
 export default function LoginForm() {
     const [login, setLogin] = useState('');
@@ -92,32 +93,20 @@ export default function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
             />
-            <Button
+            <LoadingButton
                 type="submit"
                 fullWidth
                 variant="contained"
                 sx={{ mt: 3, mb: 2 }}
-                disabled={loading}
-                startIcon={loading ? <CircularProgress size={16} /> : null}
+                loading={loading}
+                loadingText="ログイン中..."
             >
-                {loading ? 'ログイン中...' : 'ログイン'}
-            </Button>
-            <Backdrop
+                ログイン
+            </LoadingButton>
+            <LoadingBackdrop
                 open={loading}
-                sx={{
-                    position: 'absolute',
-                    zIndex: (theme) => theme.zIndex.drawer + 1,
-                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                    borderRadius: 2,
-                }}
-            >
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                    <CircularProgress size={60} />
-                    <Typography variant="h6" color="primary">
-                        ログイン中...
-                    </Typography>
-                </Box>
-            </Backdrop>
+                message="ログイン中..."
+            />
         </Box>
     );
 }
