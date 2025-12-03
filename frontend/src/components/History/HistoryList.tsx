@@ -49,14 +49,27 @@ export default function HistoryList({ onLoadHistory, refreshTrigger }: HistoryLi
     const [isSaving, setIsSaving] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [isDeleting, setIsDeleting] = useState(false);
+    const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         fetchHistories();
     }, [refreshTrigger]);
 
+    /**
+     * 履歴一覧を取得する
+     */
     const fetchHistories = async () => {
-        const res = await api.get('/histories');
-        setHistories(res.data);
+        setIsLoading(true);
+        try {
+            const res = await api.get('/histories');
+            setHistories(res.data);
+        } catch (error) {
+            console.error('履歴の取得に失敗しました:', error);
+            alert('履歴の取得に失敗しました。');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     /**
@@ -66,14 +79,28 @@ export default function HistoryList({ onLoadHistory, refreshTrigger }: HistoryLi
      */
     const handleDelete = async (id: number) => {
         if (confirm('本当にこの履歴を削除しますか？')) {
-            await api.delete(`/histories/${id}`);
-            fetchHistories();
-            // 選択状態からも削除
-            setSelectedIds((prev) => {
-                const newSet = new Set(prev);
-                newSet.delete(id);
-                return newSet;
-            });
+            // 削除中のIDを追加
+            setDeletingIds((prev) => new Set(prev).add(id));
+            try {
+                await api.delete(`/histories/${id}`);
+                fetchHistories();
+                // 選択状態からも削除
+                setSelectedIds((prev) => {
+                    const newSet = new Set(prev);
+                    newSet.delete(id);
+                    return newSet;
+                });
+            } catch (error) {
+                console.error('履歴の削除に失敗しました:', error);
+                alert('履歴の削除に失敗しました。');
+            } finally {
+                // 削除中のIDを削除
+                setDeletingIds((prev) => {
+                    const newSet = new Set(prev);
+                    newSet.delete(id);
+                    return newSet;
+                });
+            }
         }
     };
 
@@ -202,13 +229,13 @@ export default function HistoryList({ onLoadHistory, refreshTrigger }: HistoryLi
         <Box sx={{ mt: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">検索履歴</Typography>
-                {histories.length > 0 && (
+                {histories.length > 0 && !isLoading && (
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                         <Button
                             size="small"
                             variant="outlined"
                             onClick={handleSelectAll}
-                            disabled={isDeleting}
+                            disabled={isDeleting || isLoading}
                         >
                             {isAllSelected ? '全解除' : '全選択'}
                         </Button>
@@ -219,7 +246,7 @@ export default function HistoryList({ onLoadHistory, refreshTrigger }: HistoryLi
                                 color="error"
                                 startIcon={isDeleting ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}
                                 onClick={handleBulkDelete}
-                                disabled={isDeleting}
+                                disabled={isDeleting || isLoading}
                             >
                                 {isDeleting ? '削除中...' : `一括削除 (${selectedIds.size}件)`}
                             </Button>
@@ -227,12 +254,18 @@ export default function HistoryList({ onLoadHistory, refreshTrigger }: HistoryLi
                     </Box>
                 )}
             </Box>
-            {histories.length === 0 ? (
+            {isLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+                    <CircularProgress />
+                </Box>
+            ) : histories.length === 0 ? (
                 <Typography color="text.secondary">履歴がありません。</Typography>
             ) : (
                 <List>
                     {histories.map((history) => {
                         const isSelected = selectedIds.has(history.id);
+                        const isDeletingItem = deletingIds.has(history.id);
+                        const isItemDisabled = isDeleting || isDeletingItem || isLoading;
                         return (
                             <ListItem
                                 key={history.id}
@@ -244,7 +277,7 @@ export default function HistoryList({ onLoadHistory, refreshTrigger }: HistoryLi
                                             variant="outlined"
                                             onClick={() => onLoadHistory(history)}
                                             sx={{ mr: 1 }}
-                                            disabled={isDeleting}
+                                            disabled={isItemDisabled}
                                         >
                                             読み込む
                                         </Button>
@@ -252,7 +285,7 @@ export default function HistoryList({ onLoadHistory, refreshTrigger }: HistoryLi
                                             edge="end"
                                             aria-label="edit"
                                             onClick={() => handleEditOpen(history)}
-                                            disabled={isDeleting}
+                                            disabled={isItemDisabled}
                                         >
                                             <EditIcon />
                                         </IconButton>
@@ -260,9 +293,14 @@ export default function HistoryList({ onLoadHistory, refreshTrigger }: HistoryLi
                                             edge="end"
                                             aria-label="delete"
                                             onClick={() => handleDelete(history.id)}
-                                            disabled={isDeleting}
+                                            disabled={isItemDisabled}
+                                            sx={{ position: 'relative' }}
                                         >
-                                            <DeleteIcon />
+                                            {isDeletingItem ? (
+                                                <CircularProgress size={20} color="inherit" />
+                                            ) : (
+                                                <DeleteIcon />
+                                            )}
                                         </IconButton>
                                     </Box>
                                 }
@@ -270,7 +308,7 @@ export default function HistoryList({ onLoadHistory, refreshTrigger }: HistoryLi
                                 <Checkbox
                                     checked={isSelected}
                                     onChange={() => handleToggleSelect(history.id)}
-                                    disabled={isDeleting}
+                                    disabled={isItemDisabled}
                                     sx={{ mr: 1 }}
                                 />
                                 <ListItemText
