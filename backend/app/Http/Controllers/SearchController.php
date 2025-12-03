@@ -41,8 +41,27 @@ class SearchController extends Controller
 
         $results = [];
 
+        // お気に入りアイテムが0件の場合は空の結果を返す
+        if ($favorites->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'search_point' => [
+                    'lat' => $lat,
+                    'lng' => $lng,
+                    'address_resolved' => $formattedAddress,
+                ],
+                'results' => [],
+            ]);
+        }
+
         // 3. Search Places for each keyword
         foreach ($favorites as $item) {
+            // ジャンルが削除されている場合はスキップ
+            if (!$item->genre) {
+                Log::warning("FavoriteItem {$item->id} has no genre, skipping");
+                continue;
+            }
+
             $response = Http::get('https://maps.googleapis.com/maps/api/place/nearbysearch/json', [
                 'location' => "{$lat},{$lng}",
                 'radius' => $validated['radius_m'],
@@ -53,7 +72,13 @@ class SearchController extends Controller
 
             $stores = [];
             if ($response->successful()) {
-                foreach ($response->json('results') as $place) {
+                $places = $response->json('results', []);
+                foreach ($places as $place) {
+                    // 必要なデータが存在するかチェック
+                    if (!isset($place['geometry']['location']['lat']) || !isset($place['geometry']['location']['lng'])) {
+                        continue;
+                    }
+
                     // Calculate distance (simple haversine or use geometry lib, but for now just raw data)
                     // Actually, we can calculate distance here or let frontend do it.
                     // Let's calculate simple distance.
@@ -61,11 +86,11 @@ class SearchController extends Controller
 
                     if ($distance <= $validated['radius_m']) {
                         $stores[] = [
-                            'name' => $place['name'],
+                            'name' => $place['name'] ?? '',
                             'latitude' => $place['geometry']['location']['lat'],
                             'longitude' => $place['geometry']['location']['lng'],
                             'distance_m' => round($distance),
-                            'place_id' => $place['place_id'],
+                            'place_id' => $place['place_id'] ?? '',
                             'vicinity' => $place['vicinity'] ?? '',
                         ];
                     }

@@ -14,9 +14,9 @@ import {
     DialogContent,
     DialogActions,
     TextField,
-    CircularProgress,
     Checkbox,
 } from '@mui/material';
+import { LoadingButton, LoadingIconButton, LoadingInline } from '@/components/Loading';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import EditIcon from '@mui/icons-material/Edit';
@@ -240,24 +240,24 @@ export default function HistoryList({ onLoadHistory, refreshTrigger }: HistoryLi
                             {isAllSelected ? '全解除' : '全選択'}
                         </Button>
                         {selectedIds.size > 0 && (
-                            <Button
+                            <LoadingButton
                                 size="small"
                                 variant="contained"
                                 color="error"
-                                startIcon={isDeleting ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}
+                                startIcon={<DeleteIcon />}
                                 onClick={handleBulkDelete}
-                                disabled={isDeleting || isLoading}
+                                disabled={isLoading}
+                                loading={isDeleting}
+                                loadingText={`削除中... (${selectedIds.size}件)`}
                             >
-                                {isDeleting ? '削除中...' : `一括削除 (${selectedIds.size}件)`}
-                            </Button>
+                                一括削除 ({selectedIds.size}件)
+                            </LoadingButton>
                         )}
                     </Box>
                 )}
             </Box>
             {isLoading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
-                    <CircularProgress />
-                </Box>
+                <LoadingInline sx={{ py: 4 }} />
             ) : histories.length === 0 ? (
                 <Typography color="text.secondary">履歴がありません。</Typography>
             ) : (
@@ -289,19 +289,15 @@ export default function HistoryList({ onLoadHistory, refreshTrigger }: HistoryLi
                                         >
                                             <EditIcon />
                                         </IconButton>
-                                        <IconButton
+                                        <LoadingIconButton
                                             edge="end"
                                             aria-label="delete"
                                             onClick={() => handleDelete(history.id)}
                                             disabled={isItemDisabled}
-                                            sx={{ position: 'relative' }}
+                                            loading={isDeletingItem}
                                         >
-                                            {isDeletingItem ? (
-                                                <CircularProgress size={20} color="inherit" />
-                                            ) : (
-                                                <DeleteIcon />
-                                            )}
-                                        </IconButton>
+                                            <DeleteIcon />
+                                        </LoadingIconButton>
                                     </Box>
                                 }
                             >
@@ -366,14 +362,16 @@ export default function HistoryList({ onLoadHistory, refreshTrigger }: HistoryLi
                         <Button type="button" onClick={handleEditClose} disabled={isSaving}>
                             キャンセル
                         </Button>
-                        <Button
+                        <LoadingButton
                             type="submit"
                             variant="contained"
-                            disabled={!editForm.name || !editForm.address_text || editForm.radius_meter <= 0 || isSaving}
-                            startIcon={isSaving ? <CircularProgress size={20} color="inherit" /> : null}
+                            disabled={!editForm.name || !editForm.address_text || editForm.radius_meter <= 0}
+                            loading={isSaving}
+                            loadingText="保存中..."
+                            spinnerSize={20}
                         >
-                            {isSaving ? '保存中...' : '保存'}
-                        </Button>
+                            保存
+                        </LoadingButton>
                     </DialogActions>
                 </form>
             </Dialog>

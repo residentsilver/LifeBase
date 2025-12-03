@@ -3,9 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import {
     Box, Typography, Tabs, Tab, Button, List, ListItem, ListItemText,
-    IconButton, Dialog, DialogTitle, DialogContent, TextField, DialogActions,
-    FormControl, InputLabel, Select, MenuItem, Snackbar, Alert, CircularProgress
+    Dialog, DialogTitle, DialogContent, TextField, DialogActions,
+    FormControl, InputLabel, Select, MenuItem, Snackbar, Alert
 } from '@mui/material';
+import { LoadingButton, LoadingIconButton } from '@/components/Loading';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
@@ -260,18 +261,15 @@ export default function FavoritesManager() {
                                 <ListItem
                                     key={item.id}
                                     secondaryAction={
-                                        <IconButton 
+                                        <LoadingIconButton 
                                             edge="end" 
                                             aria-label="delete" 
                                             onClick={() => handleDeleteItem(item.id)}
                                             disabled={isDeleting || deletingItemId !== null}
+                                            loading={isDeleting}
                                         >
-                                            {isDeleting ? (
-                                                <CircularProgress size={20} />
-                                            ) : (
-                                                <DeleteIcon />
-                                            )}
-                                        </IconButton>
+                                            <DeleteIcon />
+                                        </LoadingIconButton>
                                     }
                                 >
                                     <ListItemText primary={item.keyword} />
@@ -286,15 +284,15 @@ export default function FavoritesManager() {
                     {/* Genre Actions (Delete current genre) */}
                     {typeof selectedGenreId === 'number' && (
                         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                            <Button 
+                            <LoadingButton 
                                 color="error" 
                                 size="small" 
                                 onClick={() => handleDeleteGenre(selectedGenreId)}
-                                disabled={deletingGenreId !== null}
-                                startIcon={deletingGenreId === selectedGenreId ? <CircularProgress size={16} /> : null}
+                                loading={deletingGenreId === selectedGenreId}
+                                loadingText="削除中..."
                             >
-                                {deletingGenreId === selectedGenreId ? '削除中...' : 'このジャンルを削除'}
-                            </Button>
+                                このジャンルを削除
+                            </LoadingButton>
                         </Box>
                     )}
                 </>
@@ -340,14 +338,14 @@ export default function FavoritesManager() {
                     >
                         キャンセル
                     </Button>
-                    <Button
+                    <LoadingButton
                         onClick={handleCreateGenre}
                         variant="contained"
-                        disabled={loading || !newGenreName.trim()}
-                        startIcon={loading ? <CircularProgress size={16} /> : null}
+                        disabled={!newGenreName.trim()}
+                        loading={loading}
                     >
                         作成
-                    </Button>
+                    </LoadingButton>
                 </DialogActions>
             </Dialog>
 
@@ -406,14 +404,14 @@ export default function FavoritesManager() {
                     >
                         キャンセル
                     </Button>
-                    <Button
+                    <LoadingButton
                         onClick={handleCreateItem}
                         variant="contained"
-                        disabled={loading || !newItemKeyword.trim() || !newItemGenreId}
-                        startIcon={loading ? <CircularProgress size={16} /> : null}
+                        disabled={!newItemKeyword.trim() || !newItemGenreId}
+                        loading={loading}
                     >
                         作成
-                    </Button>
+                    </LoadingButton>
                 </DialogActions>
             </Dialog>
 

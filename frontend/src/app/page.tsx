@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Container, Box, Typography, Link, CircularProgress } from '@mui/material';
+import { Container, Box, Typography, Link } from '@mui/material';
+import { LoadingInline } from '@/components/Loading';
 import LoginForm from '@/components/Auth/LoginForm';
 import NextLink from 'next/link';
 import api from '@/lib/axios';
@@ -53,17 +54,16 @@ export default function Home() {
                 <Box
                     sx={{
                         marginTop: 8,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
                         minHeight: '50vh',
                     }}
                 >
-                    <CircularProgress />
-                    <Typography variant="body2" sx={{ mt: 2 }}>
-                        読み込み中...
-                    </Typography>
+                    <LoadingInline
+                        message="読み込み中..."
+                        sx={{
+                            justifyContent: 'center',
+                            minHeight: '50vh',
+                        }}
+                    />
                 </Box>
             </Container>
         );
